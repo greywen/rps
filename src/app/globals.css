@@ -1,0 +1,280 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  /* 安全区域适配 */
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  --safe-area-inset-left: env(safe-area-inset-left);
+  --safe-area-inset-right: env(safe-area-inset-right);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #faf5ff;
+    --foreground: #4c1d95;
+  }
+}
+
+/* 移动端基础优化 */
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  /* 防止iOS回弹效果 */
+  overscroll-behavior: none;
+  /* 安全区域内边距 */
+  padding-top: var(--safe-area-inset-top);
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+}
+
+/* 禁用长按选择 */
+* {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 允许输入框选择 */
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* 触摸优化 */
+button, a {
+  touch-action: manipulation;
+}
+
+/* 自定义动画 */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(5deg);
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-confetti {
+  animation: confetti-fall 5s linear forwards;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* 延迟动画类 */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-1000 { animation-delay: 1000ms; }
+
+/* 石头剪刀布背景动画 - 连续流动 */
+@keyframes rps-float {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(0.8);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-200vh) rotate(360deg) scale(1);
+    opacity: 0.4;
+  }
+}
+
+@keyframes rps-float-reverse {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(0.8);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateY(200vh) rotate(-360deg) scale(1);
+    opacity: 0.3;
+  }
+}
+
+@keyframes rps-drift {
+  0% {
+    transform: translateX(0) translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(15px) translateY(-30px) rotate(5deg);
+  }
+  50% {
+    transform: translateX(0) translateY(-60px) rotate(0deg);
+  }
+  75% {
+    transform: translateX(-15px) translateY(-90px) rotate(-5deg);
+  }
+  100% {
+    transform: translateX(0) translateY(-120px) rotate(0deg);
+  }
+}
+
+@keyframes rps-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.7;
+  }
+}
+
+@keyframes rps-spin {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(90deg) scale(1.1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1);
+  }
+  75% {
+    transform: rotate(270deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes rps-shake-intense {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  10% { transform: translateX(-8px) translateY(-3px); }
+  20% { transform: translateX(8px) translateY(3px); }
+  30% { transform: translateX(-6px) translateY(-6px); }
+  40% { transform: translateX(6px) translateY(6px); }
+  50% { transform: translateX(-4px) translateY(-4px); }
+  60% { transform: translateX(4px) translateY(4px); }
+  70% { transform: translateX(-8px) translateY(3px); }
+  80% { transform: translateX(8px) translateY(-3px); }
+  90% { transform: translateX(-3px) translateY(0); }
+}
+
+.animate-rps-float {
+  animation: rps-float linear infinite;
+}
+
+.animate-rps-float-reverse {
+  animation: rps-float-reverse linear infinite;
+}
+
+.animate-rps-drift {
+  animation: rps-drift ease-in-out infinite;
+}
+
+.animate-rps-pulse {
+  animation: rps-pulse ease-in-out infinite;
+}
+
+.animate-rps-spin {
+  animation: rps-spin linear infinite;
+}
+
+.animate-rps-shake {
+  animation: rps-shake-intense ease-in-out infinite;
+}
+
+/* 玻璃态效果 */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* 霓虹发光效果 */
+.neon-glow {
+  text-shadow: 
+    0 0 5px currentColor,
+    0 0 10px currentColor,
+    0 0 20px currentColor,
+    0 0 40px currentColor;
+}
+
+/* 选择按钮悬停效果 */
+.choice-btn {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.choice-btn:hover {
+  transform: scale(1.1) translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.choice-btn:active {
+  transform: scale(0.95);
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
