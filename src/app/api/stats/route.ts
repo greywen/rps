@@ -6,12 +6,12 @@ export async function GET() {
   try {
     await ensureDbInitialized();
     
-    // 获取总比分
+    // 获取总比分（统计最终游戏胜负，不是小局胜负）
     const totalStatsResult = await db.execute(`
       SELECT 
-        COALESCE(SUM(player_wins), 0) as total_player_wins,
-        COALESCE(SUM(ai_wins), 0) as total_ai_wins,
-        COALESCE(SUM(draws), 0) as total_draws,
+        COALESCE(SUM(CASE WHEN player_wins > ai_wins THEN 1 ELSE 0 END), 0) as total_player_wins,
+        COALESCE(SUM(CASE WHEN ai_wins > player_wins THEN 1 ELSE 0 END), 0) as total_ai_wins,
+        COALESCE(SUM(CASE WHEN player_wins = ai_wins THEN 1 ELSE 0 END), 0) as total_draws,
         COUNT(*) as total_games
       FROM game_sessions
       WHERE status = 'finished'
@@ -23,7 +23,7 @@ export async function GET() {
       total_games: number;
     };
 
-    // 获取每个AI的详细统计
+    // 获取每个AI的详细统计（统计最终游戏胜负，不是小局胜负）
     const aiStatsResult = await db.execute(`
       SELECT 
         ao.id,
@@ -32,9 +32,9 @@ export async function GET() {
         ao.avatar,
         ao.difficulty,
         COUNT(gs.id) as games_played,
-        COALESCE(SUM(gs.player_wins), 0) as player_wins,
-        COALESCE(SUM(gs.ai_wins), 0) as ai_wins,
-        COALESCE(SUM(gs.draws), 0) as draws,
+        COALESCE(SUM(CASE WHEN gs.player_wins > gs.ai_wins THEN 1 ELSE 0 END), 0) as player_wins,
+        COALESCE(SUM(CASE WHEN gs.ai_wins > gs.player_wins THEN 1 ELSE 0 END), 0) as ai_wins,
+        COALESCE(SUM(CASE WHEN gs.player_wins = gs.ai_wins THEN 1 ELSE 0 END), 0) as draws,
         CASE 
           WHEN COUNT(gs.id) = 0 THEN 0
           ELSE ROUND(
