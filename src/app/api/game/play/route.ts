@@ -133,6 +133,7 @@ export async function POST(request: NextRequest) {
             display_name: ai.display_name,
             description: ai.description,
             avatar: ai.avatar,
+            provider: ai.provider || 'openai',
             host: ai.host || 'https://api.openai.com/v1',
             api_key: ai.api_key,
             model: ai.model || 'gpt-4o-mini',
