@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db, { GameSession, AIOpponent, Choice } from '@/lib/db';
+import db, { GameSession, AIOpponent, Choice, ensureDbInitialized } from '@/lib/db';
 import { determineWinner, getAIChoice, getRandomChoice, generateAIComment } from '@/lib/game';
 import { getAIChoiceFromAPI, generateAICommentFromAPI } from '@/lib/ai-service';
 
 // 进行一局游戏
 export async function POST(request: NextRequest) {
   try {
+    await ensureDbInitialized();
+    
     const { sessionId, playerChoice, timeout = false, locale = 'zh' } = await request.json();
 
     if (!sessionId) {
@@ -16,7 +18,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 获取游戏会话基本信息
-    const baseSession = db.prepare('SELECT * FROM game_sessions WHERE id = ?').get(sessionId) as GameSession | undefined;
+    const baseSessionResult = await db.execute({
+      sql: 'SELECT * FROM game_sessions WHERE id = ?',
+      args: [sessionId]
+    });
+    const baseSession = baseSessionResult.rows[0] as unknown as GameSession | undefined;
 
     if (!baseSession) {
       return NextResponse.json(
@@ -33,18 +39,24 @@ export async function POST(request: NextRequest) {
     }
 
     // 获取 AI 对手信息
-    const ai = db.prepare('SELECT * FROM ai_opponents WHERE id = ?').get(baseSession.ai_id) as AIOpponent | undefined;
+    const aiResult = await db.execute({
+      sql: 'SELECT * FROM ai_opponents WHERE id = ?',
+      args: [baseSession.ai_id]
+    });
+    const ai = aiResult.rows[0] as unknown as AIOpponent | undefined;
     
     const difficulty = ai?.difficulty || 'normal';
 
     const session = { ...baseSession, difficulty };
 
     // 计算当前轮次
-    const currentRounds = db.prepare(
-      'SELECT COUNT(*) as count FROM game_rounds WHERE session_id = ?'
-    ).get(sessionId) as { count: number };
+    const currentRoundsResult = await db.execute({
+      sql: 'SELECT COUNT(*) as count FROM game_rounds WHERE session_id = ?',
+      args: [sessionId]
+    });
+    const currentRounds = currentRoundsResult.rows[0] as unknown as { count: number };
     
-    const roundNumber = currentRounds.count + 1;
+    const roundNumber = Number(currentRounds.count) + 1;
 
     if (roundNumber > session.total_rounds) {
       return NextResponse.json(
@@ -54,12 +66,16 @@ export async function POST(request: NextRequest) {
     }
 
     // 获取历史记录供AI决策
-    const history = db.prepare(`
-      SELECT round_number as round, player_choice, ai_choice, result 
-      FROM game_rounds 
-      WHERE session_id = ?
-      ORDER BY round_number
-    `).all(sessionId) as { round: number; player_choice: string; ai_choice: string; result: string }[];
+    const historyResult = await db.execute({
+      sql: `
+        SELECT round_number as round, player_choice, ai_choice, result 
+        FROM game_rounds 
+        WHERE session_id = ?
+        ORDER BY round_number
+      `,
+      args: [sessionId]
+    });
+    const history = historyResult.rows as unknown as { round: number; player_choice: string; ai_choice: string; result: string }[];
 
     // 确定玩家选择（如果超时则随机）
     const finalPlayerChoice: Choice = timeout ? getRandomChoice() : playerChoice;
@@ -97,20 +113,19 @@ export async function POST(request: NextRequest) {
     const result = determineWinner(finalPlayerChoice, aiChoice);
 
     // 记录本轮结果
-    db.prepare(`
-      INSERT INTO game_rounds (session_id, round_number, player_choice, ai_choice, result)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(sessionId, roundNumber, finalPlayerChoice, aiChoice, result);
+    await db.execute({
+      sql: `INSERT INTO game_rounds (session_id, round_number, player_choice, ai_choice, result) VALUES (?, ?, ?, ?, ?)`,
+      args: [sessionId, roundNumber, finalPlayerChoice, aiChoice, result]
+    });
 
     // 更新会话统计
     const updateField = result === 'player_win' ? 'player_wins' : 
                         result === 'ai_win' ? 'ai_wins' : 'draws';
     
-    db.prepare(`
-      UPDATE game_sessions 
-      SET ${updateField} = ${updateField} + 1
-      WHERE id = ?
-    `).run(sessionId);
+    await db.execute({
+      sql: `UPDATE game_sessions SET ${updateField} = ${updateField} + 1 WHERE id = ?`,
+      args: [sessionId]
+    });
 
     // 检查游戏是否结束
     let gameFinished = false;
@@ -120,9 +135,11 @@ export async function POST(request: NextRequest) {
       gameFinished = true;
       
       // 获取最终统计
-      const finalSession = db.prepare(
-        'SELECT player_wins, ai_wins FROM game_sessions WHERE id = ?'
-      ).get(sessionId) as { player_wins: number; ai_wins: number };
+      const finalSessionResult = await db.execute({
+        sql: 'SELECT player_wins, ai_wins FROM game_sessions WHERE id = ?',
+        args: [sessionId]
+      });
+      const finalSession = finalSessionResult.rows[0] as unknown as { player_wins: number; ai_wins: number };
 
       // 生成AI评语 - 如果有 API 配置则调用 API，否则使用本地逻辑
       if (ai && ai.api_key && !ai.api_key.includes('your-api-key')) {
@@ -143,39 +160,41 @@ export async function POST(request: NextRequest) {
           };
           aiComment = await generateAICommentFromAPI(
             aiConfig,
-            finalSession.player_wins,
-            finalSession.ai_wins,
+            Number(finalSession.player_wins),
+            Number(finalSession.ai_wins),
             locale
           );
         } catch (error) {
           console.error('生成评语 API 调用失败，使用本地逻辑:', error);
           aiComment = generateAIComment(
-            finalSession.player_wins,
-            finalSession.ai_wins
+            Number(finalSession.player_wins),
+            Number(finalSession.ai_wins)
           );
         }
       } else {
         aiComment = generateAIComment(
-          finalSession.player_wins,
-          finalSession.ai_wins
+          Number(finalSession.player_wins),
+          Number(finalSession.ai_wins)
         );
       }
 
       // 更新会话状态
-      db.prepare(`
-        UPDATE game_sessions 
-        SET status = 'finished', ai_comment = ?, finished_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `).run(aiComment, sessionId);
+      await db.execute({
+        sql: `UPDATE game_sessions SET status = 'finished', ai_comment = ?, finished_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        args: [aiComment, sessionId]
+      });
     }
 
     // 获取更新后的会话
-    const updatedSession = db.prepare(`
-      SELECT gs.*, ao.name as ai_name, ao.display_name, ao.avatar as ai_avatar
-      FROM game_sessions gs
-      LEFT JOIN ai_opponents ao ON gs.ai_id = ao.id
-      WHERE gs.id = ?
-    `).get(sessionId);
+    const updatedSessionResult = await db.execute({
+      sql: `
+        SELECT gs.*, ao.name as ai_name, ao.display_name, ao.avatar as ai_avatar
+        FROM game_sessions gs
+        LEFT JOIN ai_opponents ao ON gs.ai_id = ao.id
+        WHERE gs.id = ?
+      `,
+      args: [sessionId]
+    });
 
     return NextResponse.json({
       success: true,
@@ -187,7 +206,7 @@ export async function POST(request: NextRequest) {
           result,
           wasTimeout: timeout
         },
-        session: updatedSession,
+        session: updatedSessionResult.rows[0],
         gameFinished,
         aiComment
       }

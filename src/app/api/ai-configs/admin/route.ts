@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import db, { AIOpponent } from '@/lib/db';
+import db, { AIOpponent, ensureDbInitialized } from '@/lib/db';
 import OpenAI, { AzureOpenAI } from 'openai';
 import { validateAuthFromRequest } from '@/lib/auth';
 
@@ -20,9 +20,13 @@ export async function GET(request: Request) {
   if (authError) return authError;
 
   try {
-    const opponents = db.prepare(`
+    await ensureDbInitialized();
+    
+    const result = await db.execute(`
       SELECT * FROM ai_opponents ORDER BY sort_order DESC, id
-    `).all() as AIOpponent[];
+    `);
+    
+    const opponents = result.rows as unknown as AIOpponent[];
     
     return NextResponse.json({ success: true, data: opponents });
   } catch (error) {

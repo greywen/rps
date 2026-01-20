@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import db, { ensureDbInitialized } from '@/lib/db';
 
 // 获取总体统计数据
 export async function GET() {
   try {
+    await ensureDbInitialized();
+    
     // 获取总比分
-    const totalStats = db.prepare(`
+    const totalStatsResult = await db.execute(`
       SELECT 
         COALESCE(SUM(player_wins), 0) as total_player_wins,
         COALESCE(SUM(ai_wins), 0) as total_ai_wins,
@@ -13,7 +15,8 @@ export async function GET() {
         COUNT(*) as total_games
       FROM game_sessions
       WHERE status = 'finished'
-    `).get() as {
+    `);
+    const totalStats = totalStatsResult.rows[0] as unknown as {
       total_player_wins: number;
       total_ai_wins: number;
       total_draws: number;
@@ -21,7 +24,7 @@ export async function GET() {
     };
 
     // 获取每个AI的详细统计
-    const aiStats = db.prepare(`
+    const aiStatsResult = await db.execute(`
       SELECT 
         ao.id,
         ao.display_name as name,
@@ -44,13 +47,13 @@ export async function GET() {
       WHERE ao.enabled = 1
       GROUP BY ao.id
       ORDER BY ao.id
-    `).all();
+    `);
 
     return NextResponse.json({
       success: true,
       data: {
         total: totalStats,
-        byAI: aiStats
+        byAI: aiStatsResult.rows
       }
     });
   } catch (error) {

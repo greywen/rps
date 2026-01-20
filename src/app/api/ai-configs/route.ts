@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import db, { AIOpponent } from '@/lib/db';
+import db, { AIOpponent, ensureDbInitialized } from '@/lib/db';
 import { validateAuthFromRequest } from '@/lib/auth';
 
 // 验证管理员权限
@@ -16,12 +16,16 @@ function checkAuth(request: Request) {
 // 获取所有 AI 对手（前端显示用，隐藏敏感信息）
 export async function GET() {
   try {
-    const opponents = db.prepare(`
+    await ensureDbInitialized();
+    
+    const result = await db.execute(`
       SELECT id, name, display_name, display_name_en, avatar, difficulty, description, description_en, model, enabled, sort_order, created_at, updated_at
       FROM ai_opponents
       WHERE enabled = 1
       ORDER BY sort_order DESC, id
-    `).all() as Omit<AIOpponent, 'host' | 'api_key'>[];
+    `);
+    
+    const opponents = result.rows as unknown as Omit<AIOpponent, 'host' | 'api_key'>[];
     
     return NextResponse.json({ success: true, data: opponents });
   } catch (error) {
@@ -39,6 +43,8 @@ export async function POST(request: NextRequest) {
   if (authError) return authError;
 
   try {
+    await ensureDbInitialized();
+    
     const body = await request.json();
     const { name, display_name, display_name_en, avatar, difficulty, description, description_en, provider, host, api_key, model, enabled = true, sort_order = 10 } = body;
 
@@ -49,14 +55,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = db.prepare(`
-      INSERT INTO ai_opponents (name, display_name, display_name_en, avatar, difficulty, description, description_en, provider, host, api_key, model, enabled, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(name, display_name, display_name_en || null, avatar || null, difficulty || 'normal', description || null, description_en || null, provider || 'openai', host || null, api_key || null, model || null, enabled ? 1 : 0, sort_order);
+    const result = await db.execute({
+      sql: `
+        INSERT INTO ai_opponents (name, display_name, display_name_en, avatar, difficulty, description, description_en, provider, host, api_key, model, enabled, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [name, display_name, display_name_en || null, avatar || null, difficulty || 'normal', description || null, description_en || null, provider || 'openai', host || null, api_key || null, model || null, enabled ? 1 : 0, sort_order]
+    });
 
-    const newOpponent = db.prepare('SELECT * FROM ai_opponents WHERE id = ?').get(result.lastInsertRowid);
+    const newOpponentResult = await db.execute({
+      sql: 'SELECT * FROM ai_opponents WHERE id = ?',
+      args: [Number(result.lastInsertRowid)]
+    });
 
-    return NextResponse.json({ success: true, data: newOpponent });
+    return NextResponse.json({ success: true, data: newOpponentResult.rows[0] });
   } catch (error) {
     console.error('创建 AI 对手失败:', error);
     return NextResponse.json(
@@ -72,6 +84,8 @@ export async function PUT(request: NextRequest) {
   if (authError) return authError;
 
   try {
+    await ensureDbInitialized();
+    
     const body = await request.json();
     const { id, name, display_name, display_name_en, avatar, difficulty, description, description_en, provider, host, api_key, model, enabled, sort_order } = body;
 
@@ -110,15 +124,17 @@ export async function PUT(request: NextRequest) {
     updates.push('updated_at = CURRENT_TIMESTAMP');
     values.push(id);
 
-    db.prepare(`
-      UPDATE ai_opponents 
-      SET ${updates.join(', ')}
-      WHERE id = ?
-    `).run(...values);
+    await db.execute({
+      sql: `UPDATE ai_opponents SET ${updates.join(', ')} WHERE id = ?`,
+      args: values
+    });
 
-    const updatedOpponent = db.prepare('SELECT id, name, display_name, avatar, difficulty, description, model, enabled, created_at, updated_at FROM ai_opponents WHERE id = ?').get(id);
+    const updatedResult = await db.execute({
+      sql: 'SELECT id, name, display_name, avatar, difficulty, description, model, enabled, created_at, updated_at FROM ai_opponents WHERE id = ?',
+      args: [id]
+    });
 
-    return NextResponse.json({ success: true, data: updatedOpponent });
+    return NextResponse.json({ success: true, data: updatedResult.rows[0] });
   } catch (error) {
     console.error('更新 AI 对手失败:', error);
     return NextResponse.json(
@@ -134,6 +150,8 @@ export async function DELETE(request: NextRequest) {
   if (authError) return authError;
 
   try {
+    await ensureDbInitialized();
+    
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -145,15 +163,23 @@ export async function DELETE(request: NextRequest) {
     }
 
     // 检查是否有游戏会话使用此对手
-    const usedBy = db.prepare('SELECT COUNT(*) as count FROM game_sessions WHERE ai_id = ?').get(id) as { count: number };
-    if (usedBy.count > 0) {
+    const usedByResult = await db.execute({
+      sql: 'SELECT COUNT(*) as count FROM game_sessions WHERE ai_id = ?',
+      args: [id]
+    });
+    const usedBy = usedByResult.rows[0] as unknown as { count: number };
+    
+    if (Number(usedBy.count) > 0) {
       return NextResponse.json(
         { success: false, error: '此对手有游戏记录，无法删除' },
         { status: 400 }
       );
     }
 
-    db.prepare('DELETE FROM ai_opponents WHERE id = ?').run(id);
+    await db.execute({
+      sql: 'DELETE FROM ai_opponents WHERE id = ?',
+      args: [id]
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
