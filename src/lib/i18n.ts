@@ -80,6 +80,15 @@ export const translations = {
     poweredBy: 'Powered by',
     aiModel: 'AI Model',
     noAiConfigured: 'Random Mode',
+
+    // 免责声明弹框
+    disclaimer: 'Disclaimer',
+    disclaimerContent1: 'This is just an entertainment game, the results are random and do not represent the actual capabilities of any AI model.',
+    disclaimerContent2: 'The game outcomes are purely for entertainment purposes and should not be used to evaluate or compare AI models.',
+    disclaimerContent3: 'We do not collect, store, or share any personal information or user data.',
+    disclaimerContent4: 'By continuing, you acknowledge that you understand this is just a game for fun.',
+    iUnderstand: 'I Understand',
+    welcomeToStar: 'Welcome to Star',
   },
   zh: {
     // 通用
@@ -158,6 +167,15 @@ export const translations = {
     poweredBy: '驱动模型',
     aiModel: 'AI 模型',
     noAiConfigured: '随机模式',
+
+    // 免责声明弹框
+    disclaimer: '免责声明',
+    disclaimerContent1: '这只是一个娱乐小游戏，结果具有随机性，不代表任何AI大模型的真实能力。',
+    disclaimerContent2: '游戏结果仅供娱乐，不应用于评估或比较AI模型的实际性能。',
+    disclaimerContent3: '本网站不收集、存储或分享任何个人信息或用户数据。',
+    disclaimerContent4: '继续使用即表示您理解这只是一个趣味游戏。',
+    iUnderstand: '我已了解',
+    welcomeToStar: '欢迎 Star',
   }
 } as const;
 
