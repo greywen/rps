@@ -14,7 +14,7 @@ function checkAuth(request: Request) {
   return null;
 }
 
-// 获取所有 AI 对手（管理员用，包含完整信息）
+// 获取所有 AI 对手（管理员用，不返回 api_key）
 export async function GET(request: Request) {
   const authError = checkAuth(request);
   if (authError) return authError;
@@ -23,10 +23,11 @@ export async function GET(request: Request) {
     await ensureDbInitialized();
     
     const result = await db.execute(`
-      SELECT * FROM ai_opponents ORDER BY sort_order DESC, id
+      SELECT id, name, display_name, display_name_en, avatar, difficulty, description, description_en, provider, host, model, enabled, sort_order, created_at, updated_at
+      FROM ai_opponents ORDER BY sort_order DESC, id
     `);
     
-    const opponents = result.rows as unknown as AIOpponent[];
+    const opponents = result.rows as unknown as Omit<AIOpponent, 'api_key'>[];
     
     return NextResponse.json({ success: true, data: opponents });
   } catch (error) {
