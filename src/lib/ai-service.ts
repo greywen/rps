@@ -72,10 +72,6 @@ export async function getAIChoiceFromAPI(
   const systemPrompt = buildSystemPrompt(difficulty);
   const userPrompt = buildUserPrompt(historyDescription, history.length + 1);
 
-  console.log("systemPrompt", systemPrompt);
-  console.log("userPrompt", userPrompt);
-  console.log("AI Config - Provider:", config.provider, "Host:", config.host, "Model/Deployment:", config.model);
-
   try {
     const response = await client.chat.completions.create({
       model: config.model, // 注意：Azure OpenAI 这里需要填部署名称(deployment name)，不是模型名称

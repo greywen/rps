@@ -125,10 +125,12 @@ export async function POST(request: Request) {
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.9,
-        max_completion_tokens: 200,
+        max_completion_tokens: 4096, // 推理模型需要更多 token
       });
 
-      const content = response.choices[0]?.message?.content?.trim() || '';
+      // 获取内容，兼容推理模型（可能内容在 reasoning_content 中生成后才输出到 content）
+      const message = response.choices[0]?.message as { content?: string; reasoning_content?: string };
+      const content = message?.content?.trim() || '';
       
       try {
         // 尝试解析 JSON
@@ -143,12 +145,12 @@ export async function POST(request: Request) {
             description_en: parsed.description_en || '',
           });
         }
-      } catch (parseError) {
-        console.error('解析生成结果失败:', parseError, content);
+      } catch {
+        // JSON 解析失败
       }
 
       return NextResponse.json(
-        { success: false, error: '无法解析AI返回的内容' },
+        { success: false, error: '无法解析AI返回的内容，请查看服务器日志' },
         { status: 400 }
       );
     }
