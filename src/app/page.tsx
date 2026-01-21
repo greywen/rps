@@ -292,7 +292,7 @@ export default function Home() {
             {t('chooseOpponent')}
           </h3>
           
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
             {aiOpponents.map((ai) => {
               const displayName = locale === 'en' && ai.display_name_en ? ai.display_name_en : ai.display_name;
               const description = locale === 'en' && ai.description_en ? ai.description_en : ai.description;
@@ -334,7 +334,8 @@ export default function Home() {
             })}
           </div>
 
-          <div className="text-center">
+          {/* 桌面端按钮 - 在卡片区域内部 */}
+          <div className="hidden sm:block text-center mt-6 sm:mt-8">
             <button
               onClick={startGame}
               disabled={!selectedAI || starting}
@@ -362,7 +363,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="mt-8 text-center text-gray-500 text-sm">
+        <div className="mt-8 pb-24 sm:pb-0 text-center text-gray-500 text-sm">
           <p>{t('gameRules')}</p>
           <p className="mt-1">{t('rpsRules')}</p>
           
@@ -383,6 +384,33 @@ export default function Home() {
             <span className="text-xs">{t('welcomeToStar')} ⭐</span>
           </a>
         </div>
+      </div>
+
+      {/* 移动端悬浮按钮 */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white to-transparent z-40">
+        <button
+          onClick={startGame}
+          disabled={!selectedAI || starting}
+          className={`w-full py-4 rounded-full text-lg font-bold transition-all duration-300 shadow-lg ${
+            selectedAI && !starting
+              ? 'bg-gradient-to-r from-rose-400 to-violet-500 text-white active:scale-95'
+              : 'bg-gray-200 text-gray-400'
+          }`}
+        >
+          {starting ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              {t('starting')}
+            </span>
+          ) : !selectedAI ? (
+            t('selectOpponentFirst')
+          ) : (
+            t('startGame')
+          )}
+        </button>
       </div>
     </div>
   );
