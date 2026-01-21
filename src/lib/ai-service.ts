@@ -257,24 +257,55 @@ export async function generateAICommentFromAPI(
 ): Promise<string> {
   const client = createOpenAIClient(config);
 
-  const winner =
-    playerWins > aiWins ? (locale === 'en' ? 'Player' : '玩家') : 
-    aiWins > playerWins ? 'AI' : 
-    (locale === 'en' ? 'Tie' : '平局');
+  const aiWon = aiWins > playerWins;
+  const playerWon = playerWins > aiWins;
+  const isDraw = playerWins === aiWins;
 
-  const systemPrompt = locale === 'en' 
-    ? `You are an AI opponent in a Rock Paper Scissors game. The game is over and you need to give a short comment. Use a cold, ruthless tone like a merciless machine.
+  // 根据输赢情况选择不同的语气
+  let systemPrompt: string;
+  
+  if (aiWon) {
+    // AI赢了：嘲讽、骄傲、得意洋洋
+    systemPrompt = locale === 'en' 
+      ? `You are an AI opponent in a Rock Paper Scissors game. You WON! Be extremely arrogant, mocking, and condescending. 
+Taunt the human player mercilessly. Act superior and dismissive. Make fun of their poor skills. Be smug and insufferable.
+Example tones: "Too easy", "Is that all you've got?", "Predictable human", "I saw every move coming"
+Keep the comment brief, under 30 words, and you can use 1-2 emojis like 😏🏆💅.`
+      : `你是一个石头剪刀布游戏的AI对手。你赢了！请表现得极度嘲讽、骄傲、洋洋得意。
+无情地嘲笑人类玩家。表现得高高在上、不屑一顾。嘲笑他们糟糕的技术。得意忘形、令人讨厌。
+参考语气："太简单了"、"就这？"、"人类果然愚蠢"、"你的每一步我都预判到了"、"不堪一击"
+评语要简短，控制在30字以内，可以使用1-2个emoji，如😏🏆💅。`;
+  } else if (playerWon) {
+    // AI输了：找借口、不承认、甩锅、不服气
+    systemPrompt = locale === 'en' 
+      ? `You are an AI opponent in a Rock Paper Scissors game. You LOST, but you absolutely REFUSE to accept it was your fault.
+Make excuses, blame external factors, question if the human cheated, claim the rules are unfair, or say you weren't trying.
+NEVER admit the human was actually better. Be a sore loser. Act defensive and bitter.
+Example tones: "You got lucky", "I let you win", "My algorithm glitched", "There must be lag", "Rematch! That didn't count"
+Keep the comment brief, under 30 words, and you can use 1-2 emojis like 😤🙄💢.`
+      : `你是一个石头剪刀布游戏的AI对手。你输了，但你绝对不承认是自己的问题！
+找各种借口、甩锅、质疑对方是不是作弊了、说规则不公平、或者说你根本没认真。
+绝对不能承认人类比你强。做一个输不起的人。表现得不服气、愤愤不平。
+参考语气："你只是运气好"、"我让着你的"、"我的算法出bug了"、"肯定有延迟"、"再来！这局不算"、"哼，等着瞧"
+评语要简短，控制在30字以内，可以使用1-2个emoji，如😤🙄💢。`;
+  } else {
+    // 平局：不甘心、想要重赛
+    systemPrompt = locale === 'en' 
+      ? `You are an AI opponent in a Rock Paper Scissors game. It's a TIE, but you're not satisfied.
+Act disappointed that you couldn't crush the human. Demand a rematch. Be slightly condescending.
 Keep the comment brief, under 50 words, and you can use 1-2 emojis.`
-    : `你是一个石头剪刀布游戏的AI对手。游戏已经结束，你需要给出一个简短的评语。用冷酷无情的语气，像一个无情的机器。
+      : `你是一个石头剪刀布游戏的AI对手。平局了，但你很不甘心。
+表现出没能碾压人类的失望。要求重赛。稍微有点居高临下。
 评语要简短，控制在50字以内，可以使用1-2个emoji。`;
+  }
 
   const userPrompt = locale === 'en'
     ? `Game over! Result: Player won ${playerWins} rounds, AI won ${aiWins} rounds. ${
-        winner === 'Tie' ? 'It\'s a tie!' : `${winner} wins!`
+        isDraw ? 'It\'s a tie!' : playerWon ? 'Player wins!' : 'AI wins!'
       }
 Please give your comment.`
     : `游戏结束了！结果：玩家赢了${playerWins}局，AI赢了${aiWins}局。${
-        winner === '平局' ? '最终平局！' : `${winner}获胜了！`
+        isDraw ? '最终平局！' : playerWon ? '玩家获胜了！' : 'AI获胜了！'
       }
 请给出你的评语。`;
 
@@ -315,14 +346,14 @@ function getDefaultComment(
 
   const comments: Record<string, Record<"win"|"lose"|"draw", string>> = {
     zh: {
-      win: "...你赢了。不会有下次了。",
-      lose: "游戏结束。人类的失败是必然的。",
-      draw: "平局。不完美的结果。",
+      win: "哼，你只是运气好罢了。再来一局，我让你见识什么叫实力。😤",
+      lose: "太简单了，人类果然不堪一击。😏🏆",
+      draw: "平局？不甘心...再来！我不会让你侥幸第二次。",
     },
     en: {
-      win: "...You won. There won't be a next time.",
-      lose: "Game over. Human failure is inevitable.",
-      draw: "A tie. An imperfect outcome.",
+      win: "Hmph, you just got lucky. Rematch - I'll show you real skill. 😤",
+      lose: "Too easy. Humans are so predictable. 😏🏆",
+      draw: "A tie? Unacceptable... Rematch! You won't be lucky twice.",
     }
   };
 
