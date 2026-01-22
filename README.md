@@ -7,6 +7,11 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?logo=tailwind-css)
 
+### 🚀 在线体验
+
+- **优先体验地址**：https://rps.anhejin.cn
+- **有条件的**：https://rps-eta-ten.vercel.app
+
 ## ✨ 功能特性
 
 - 🎯 **人机对战** - 与 AI 对手进行五局三胜的石头剪刀布对决
